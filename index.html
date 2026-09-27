@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Timesheet Maker</title>
+  <meta name="description" content="Create simple timesheets and download them as PDFs. Free, runs entirely in your browser.">
+  <meta name="theme-color" content="#f4f6fa" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0f141c" media="(prefers-color-scheme: dark)">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Timesheet Maker">
+  <meta property="og:description" content="Create simple timesheets and download them as PDFs. Free, runs entirely in your browser.">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Timesheet Maker">
+  <meta name="twitter:description" content="Create simple timesheets and download them as PDFs. Free, runs entirely in your browser.">
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232563eb'/%3E%3Cpath d='M9 9h14M9 15h14M9 21h9' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <h1>
+        <svg class="brand-mark" viewBox="0 0 32 32" width="30" height="30" aria-hidden="true" focusable="false">
+          <rect width="32" height="32" rx="7" fill="currentColor"/>
+          <path d="M9 9h14M9 15h14M9 21h9" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        Timesheet Maker
+      </h1>
+      <p class="lede">Fill in your details, add your work entries and download a PDF.</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <form id="timesheet-form" novalidate>
+      <!-- Details -->
+      <section class="card" aria-labelledby="details-heading">
+        <h2 id="details-heading">Details</h2>
+        <div class="grid grid-2">
+          <label class="field">
+            <span>Your name or business</span>
+            <input type="text" id="worker" autocomplete="name" placeholder="e.g. Jane Smith">
+          </label>
+          <label class="field">
+            <span>Client or employer</span>
+            <input type="text" id="client" autocomplete="organization" placeholder="e.g. Acme Ltd">
+          </label>
+          <label class="field">
+            <span>Period start</span>
+            <input type="date" id="period-start">
+          </label>
+          <label class="field">
+            <span>Period end</span>
+            <input type="date" id="period-end">
+          </label>
+          <label class="field">
+            <span>Timesheet reference <em>(optional)</em></span>
+            <input type="text" id="reference" placeholder="e.g. TS-0001">
+          </label>
+          <label class="field">
+            <span>Default rate type for new entries</span>
+            <select id="default-rate-type">
+              <option value="hourly">Hourly</option>
+              <option value="half-hourly">Half-hourly</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <!-- Entries -->
+      <section class="card" aria-labelledby="entries-heading">
+        <div class="card-head">
+          <h2 id="entries-heading">Entries</h2>
+          <button type="button" class="btn btn-secondary" id="add-entry">+ Add entry</button>
+        </div>
+
+        <div class="entries-header" aria-hidden="true">
+          <span>Date</span>
+          <span>Job title</span>
+          <span>Task description</span>
+          <span>Hours</span>
+          <span>Rate type</span>
+          <span>Rate ($)</span>
+          <span class="num">Amount</span>
+          <span></span>
+        </div>
+
+        <div id="entries" class="entries"></div>
+
+        <p class="hint">
+          Half-hourly rates are charged per 30 minutes, so 1.5 hours at a half-hourly rate is 3 units.
+        </p>
+      </section>
+
+      <!-- Totals and notes -->
+      <section class="card" aria-labelledby="summary-heading">
+        <h2 id="summary-heading">Summary</h2>
+        <div class="summary-layout">
+          <div>
+            <label class="checkbox">
+              <input type="checkbox" id="include-gst">
+              <span>Add GST (15%)</span>
+            </label>
+            <label class="field">
+              <span>Notes <em>(optional)</em></span>
+              <textarea id="notes" rows="4" placeholder="e.g. Payment details, approvals or other comments"></textarea>
+            </label>
+          </div>
+
+          <dl class="totals">
+            <div><dt>Total hours</dt><dd id="total-hours">0.00</dd></div>
+            <div><dt>Subtotal</dt><dd id="subtotal">$0.00</dd></div>
+            <div id="gst-row" hidden><dt>GST (15%)</dt><dd id="gst">$0.00</dd></div>
+            <div class="grand"><dt>Total</dt><dd id="total">$0.00</dd></div>
+          </dl>
+        </div>
+      </section>
+
+      <div id="message" class="message" role="status" aria-live="polite"></div>
+
+      <div class="actions">
+        <button type="button" class="btn btn-ghost" id="clear-all">Clear all</button>
+        <button type="submit" class="btn btn-primary" id="download">Download PDF</button>
+      </div>
+    </form>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>Everything stays in your browser. Your draft is saved on this device automatically.</p>
+    </div>
+  </footer>
+
+  <template id="entry-template">
+    <div class="entry">
+      <label class="field">
+        <span class="mobile-label">Date</span>
+        <input type="date" data-field="date">
+      </label>
+      <label class="field">
+        <span class="mobile-label">Job title</span>
+        <input type="text" data-field="jobTitle" placeholder="Job title">
+      </label>
+      <label class="field">
+        <span class="mobile-label">Task description</span>
+        <input type="text" data-field="task" placeholder="What was done">
+      </label>
+      <label class="field">
+        <span class="mobile-label">Hours</span>
+        <input type="number" data-field="hours" min="0" step="0.25" inputmode="decimal" placeholder="0">
+      </label>
+      <label class="field">
+        <span class="mobile-label">Rate type</span>
+        <select data-field="rateType">
+          <option value="hourly">Hourly</option>
+          <option value="half-hourly">Half-hourly</option>
+        </select>
+      </label>
+      <label class="field">
+        <span class="mobile-label">Rate ($)</span>
+        <input type="number" data-field="rate" min="0" step="0.01" inputmode="decimal" placeholder="0.00">
+      </label>
+      <div class="field amount">
+        <span class="mobile-label">Amount</span>
+        <output data-field="amount">$0.00</output>
+      </div>
+      <button type="button" class="btn-icon" data-action="remove" aria-label="Remove entry" title="Remove entry">&times;</button>
+    </div>
+  </template>
+
+  <script src="lib/jspdf.umd.min.js"></script>
+  <script src="lib/jspdf.plugin.autotable.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
